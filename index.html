@@ -461,6 +461,7 @@ function update(dt) {
     if (f.x < 430 || f.x > 1000) f.vx *= -1; if (f.y < 290 || f.y > 560) f.vy *= -1;
   }
   // smoke & steam
+  if (mealOn() && Math.random() < dt * 3) parts.push({ t: "steam", x: TABLE.x + 2 + rand(-6, 6), y: TABLE.y - 38, vx: rand(-3, 3), vy: rand(-22, -14), life: rand(1, 1.6), max: 1.6, r: rand(2, 4) });
   if (Math.random() < dt * 5) parts.push({ t: "steam", x: 135 + rand(-12, 12), y: 344, vx: rand(-4, 4), vy: rand(-26, -16), life: rand(1.2, 2), max: 2, r: rand(3, 5) });
   if (Math.random() < dt * 3) parts.push({ t: "smoke", x: rand(110, 160), y: 228, vx: rand(4, 12), vy: rand(-20, -12), life: rand(2.5, 4), max: 4, r: rand(5, 8) });
   for (const p of parts) {
@@ -672,6 +673,40 @@ function drawBigBasket() {
   line(g, x - 19, y - 8, x + 18, y - 8, "#a07440", 1);
 }
 
+// ---------- drawing: dining table ----------
+const TABLE = { x: 300, y: 462 };
+const mealOn = () => (hour >= 6.5 && hour < 8.5) || (hour >= 11.5 && hour < 13.5) || (hour >= 18 && hour < 20);
+function drawStool(g, x, y) {
+  line(g, x - 8, y - 10, x - 10, y, "#7a4f2a", 3); line(g, x + 8, y - 10, x + 10, y, "#7a4f2a", 3);
+  ell(g, x, y - 12, 12, 4.5); fs(g, "#c9965a", INK, 1.6);
+}
+function drawTable(t) {
+  const g = ctx, x = TABLE.x, y = TABLE.y;
+  ell(g, x, y + 2, 56, 8); g.globalAlpha = 0.2; fs(g, "#2f5d1a"); g.globalAlpha = 1;
+  drawStool(g, x - 68, y - 2);
+  for (const dx of [-38, 38]) line(g, x + dx, y - 26, x + dx + (dx < 0 ? -3 : 3), y, "#7a4f2a", 5);
+  ell(g, x, y - 24, 52, 13); fs(g, "#9c6b3c", INK, 2);
+  ell(g, x, y - 30, 52, 13); fs(g, "#d9a566", INK, 2);
+  ell(g, x, y - 30, 38, 9); fs(g, "#ffe3e3", "#e64980", 1.2);
+  if (mealOn()) {
+    ell(g, x - 22, y - 30, 10, 3.5); fs(g, "#fff", INK, 1.2);
+    ell(g, x - 22, y - 33, 6, 4); fs(g, "#fff8e1", INK, 1);
+    ell(g, x + 2, y - 29, 12, 5); fs(g, "#f1f3f5", INK, 1.4);
+    ell(g, x + 2, y - 32, 10, 3.5); fs(g, "#d9822b", INK, 1);
+    for (let k = 0; k < 3; k++) { circ(g, x - 3 + k * 5, y - 32, 1.6); fs(g, ["#69db7c", "#fa5252", "#ffd8a8"][k]); }
+    ell(g, x + 26, y - 30, 9, 3.2); fs(g, "#fff", INK, 1.2);
+    drawProduce(g, "tomat", x + 23, y - 35, 0.9); drawProduce(g, "cabai", x + 31, y - 34, 0.8);
+    line(g, x - 36, y - 26, x - 30, y - 28, "#9c6b3c", 1.6); line(g, x + 36, y - 26, x + 42, y - 28, "#9c6b3c", 1.6);
+  } else {
+    ell(g, x, y - 30, 11, 4); fs(g, "#a0522d", INK, 1.4);
+    for (const [dx, dy] of [[-4, -35], [3, -36], [0, -33]]) { ell(g, x + dx, y + dy + 4, 4, 5); fs(g, "#fab005", INK, 1); }
+  }
+  // lampu minyak
+  g.fillStyle = "#868e96"; g.fillRect(x - 36, y - 37, 6, 6); g.strokeStyle = INK; g.lineWidth = 1.2; g.strokeRect(x - 36, y - 37, 6, 6);
+  const lf = 3 + Math.sin(t * 14) * 0.8;
+  g.beginPath(); g.moveTo(x - 35, y - 37); g.quadraticCurveTo(x - 38, y - 37 - lf, x - 33, y - 37 - lf * 1.8); g.quadraticCurveTo(x - 29, y - 37 - lf, x - 31, y - 37); g.closePath(); fs(g, "#ffd43b", "#e8590c", 1);
+}
+
 // ---------- drawing: environment ----------
 function drawSky(t) {
   const [top, bot] = skyCols(hour);
@@ -770,6 +805,7 @@ function render(t) {
   actors.push({ y: gm.y + 0.5, d: drawGrandma });
   for (const c of chickens) actors.push({ y: c.y, d: () => drawChicken(c) });
   actors.push({ y: 432, d: drawBigBasket });
+  actors.push({ y: TABLE.y, d: () => drawTable(t) });
   actors.push({ y: 402, d: () => { drawStoveDynamic(t); drawMother(t); } });
   actors.sort((a, b) => a.y - b.y);
   for (const a of actors) a.d();
@@ -805,7 +841,8 @@ function render(t) {
   ctx.save(); ctx.globalCompositeOperation = "lighter";
   glow(131, 392, 70 + Math.sin(t * 12) * 4, `rgba(255,140,40,${0.25 + 0.35 * night})`);
   if (night > 0.05) {
-    glow(268, 270, 60, `rgba(255,190,90,${0.35 * night})`);
+    glow(TABLE.x - 33, TABLE.y - 42, 55, `rgba(255,190,90,${0.4 * night})`);
+    glow(268, 270, 60,`rgba(255,190,90,${0.35 * night})`);
     glow(376, 270, 60, `rgba(255,190,90,${0.35 * night})`);
     for (const f of fireflies) {
       const a = night * (0.5 + 0.5 * Math.sin(t * 3 + f.ph));
